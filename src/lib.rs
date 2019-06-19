@@ -39,6 +39,7 @@ pub mod relations;
 pub mod test_utils;
 pub mod transfers;
 pub mod vptranslator;
+pub mod enrich_ntfs_with_farev2;
 
 /// Current version of the NTFS format
 pub const NTFS_VERSION: &str = "0.7";
