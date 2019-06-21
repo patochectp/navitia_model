@@ -511,6 +511,62 @@ pub fn manage_geometries(collections: &mut Collections, path: &path::Path) -> Re
     Ok(())
 }
 
+pub fn check_sanitize_farev2(collections: &mut Collections)-> Result<()> {
+    let mut ticket_use_perimeter_to_remove: Vec<TicketUsePerimeter> = vec![];
+    for ticket_use_perimeter in collections.ticket_use_perimeters.values_mut() {
+        match ticket_use_perimeter.object_type {
+            ObjectType::Network => {
+                if collections
+                    .networks
+                    .get(&ticket_use_perimeter.object_id)
+                    .is_some()
+                {
+                    warn!("network_id {} not found", ticket_use_perimeter.object_id);
+                    ticket_use_perimeter_to_remove.push(ticket_use_perimeter.clone());
+                }
+            }
+            ObjectType::Line => {
+                if collections
+                    .lines
+                    .get(&ticket_use_perimeter.object_id)
+                    .is_some()
+                {
+                    warn!("line_id {} not found", ticket_use_perimeter.object_id);
+                    ticket_use_perimeter_to_remove.push(ticket_use_perimeter.clone());
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let mut ticket_use_restriction_to_remove: Vec<TicketUseRestriction> = vec![];
+    for ticket_use_restriction in collections.ticket_use_restrictions.values_mut() {
+        match ticket_use_restriction.restriction_type {
+            RestrictionType::OriginDestination => {
+                if collections
+                    .stop_areas
+                    .get(&ticket_use_restriction.use_origin)
+                    .is_none()
+                {
+                    warn!("origin {} not found", ticket_use_restriction.use_origin);
+                    ticket_use_restriction_to_remove.push(ticket_use_restriction.clone());
+                }
+                if collections
+                    .stop_areas
+                    .get(&ticket_use_restriction.use_destination)
+                    .is_none()
+                {
+                    warn!("destination {} not found", ticket_use_restriction.use_destination);
+                    ticket_use_restriction_to_remove.push(ticket_use_restriction.clone());
+                }
+            }
+            RestrictionType::Zone => {}
+        }
+    }
+    Ok(())
+}
+
+
 #[cfg(test)]
 mod tests {
     use crate::model::Collections;

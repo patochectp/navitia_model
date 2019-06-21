@@ -1362,7 +1362,7 @@ pub struct TicketUse {
 }
 impl_id!(TicketUse);
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub enum PerimeterAction {
     #[serde(rename = "1")]
     Included,
@@ -1370,7 +1370,7 @@ pub enum PerimeterAction {
     Excluded,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct TicketUsePerimeter {
     pub ticket_use_id: String,
     pub object_type: ObjectType,
@@ -1378,7 +1378,7 @@ pub struct TicketUsePerimeter {
     pub perimeter_action: PerimeterAction,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub enum RestrictionType {
     #[serde(rename = "zone")]
     Zone,
@@ -1386,7 +1386,7 @@ pub enum RestrictionType {
     OriginDestination,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct TicketUseRestriction {
     pub ticket_use_id: String,
     pub restriction_type: RestrictionType,
