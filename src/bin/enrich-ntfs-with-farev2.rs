@@ -18,8 +18,7 @@ use chrono::NaiveDateTime;
 use log::info;
 use std::path::PathBuf;
 use structopt::StructOpt;
-use transit_model::enrich_ntfs_with_farev2;
-use transit_model::{Model, Result};
+use transit_model::Result;
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "enrich_ntfs_with_farev2", about = "Merge farev2 into ntfs")]
@@ -57,10 +56,10 @@ fn run() -> Result<()> {
     let opt = Opt::from_args();
 
     let objects = transit_model::ntfs::read(opt.input)?;
-    let mut collections = objects.into_collections();
-    collections =
+    let collections = objects.into_collections();
+
+    let new_model =
         transit_model::enrich_ntfs_with_farev2::merge_fare(collections, opt.farev2, opt.report)?;
-    let new_model = Model::new(collections)?;
 
     transit_model::ntfs::write(&new_model, opt.output, opt.current_datetime)?;
     Ok(())
