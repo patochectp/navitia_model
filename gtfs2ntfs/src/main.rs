@@ -27,19 +27,19 @@ use transit_model::Result;
 #[structopt(name = "gtfs2ntfs", about = "Convert a GTFS to an NTFS.")]
 struct Opt {
     /// input directory.
-    #[structopt(short = "i", long = "input", parse(from_os_str), default_value = ".")]
+    #[structopt(short, long, parse(from_os_str), default_value = ".")]
     input: PathBuf,
 
     /// output directory
-    #[structopt(short = "o", long = "output", parse(from_os_str))]
+    #[structopt(short, long, parse(from_os_str))]
     output: PathBuf,
 
     /// config file
-    #[structopt(short = "c", long = "config", parse(from_os_str))]
-    config_path: Option<PathBuf>,
+    #[structopt(short, long, parse(from_os_str))]
+    config: Option<PathBuf>,
 
     /// prefix
-    #[structopt(short = "p", long = "prefix")]
+    #[structopt(short, long)]
     prefix: Option<String>,
 
     /// OnDemandTransport GTFS source
@@ -82,22 +82,17 @@ fn init_logger() -> slog_scope::GlobalLoggerGuard {
 fn run(opt: Opt) -> Result<()> {
     info!("Launching gtfs2ntfs...");
 
+    let configuration = transit_model::gtfs::Configuration {
+        config_path: opt.config,
+        prefix: opt.prefix,
+        on_demand_transport: opt.odt,
+        on_demand_transport_comment: opt.odt_comment,
+    };
+
     let objects = if opt.input.is_file() {
-        transit_model::gtfs::read_from_zip(
-            opt.input,
-            opt.config_path,
-            opt.prefix,
-            opt.odt,
-            opt.odt_comment,
-        )?
+        transit_model::gtfs::read_from_zip(opt.input, configuration)?
     } else if opt.input.is_dir() {
-        transit_model::gtfs::read_from_path(
-            opt.input,
-            opt.config_path,
-            opt.prefix,
-            opt.odt,
-            opt.odt_comment,
-        )?
+        transit_model::gtfs::read_from_path(opt.input, configuration)?
     } else {
         bail!("Invalid input data: must be an existing directory or a ZIP archive");
     };
