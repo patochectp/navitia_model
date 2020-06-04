@@ -36,11 +36,9 @@ pub fn apply_rules(
     report_path: PathBuf,
 ) -> Result<Model> {
     let mut report = Report::default();
-    let mut configuration = None;
-    if let Some(object_rules_file) = object_rules_file {
-        info!("Reading object rules");
-        configuration = object_rule::init_configuration(object_rules_file, &model, &mut report);
-    }
+    let object_rule = object_rules_file
+        .map(|path| object_rule::ObjectRule::new(path.as_path(), &model))
+        .transpose()?;
 
     let vjs_by_line: HashMap<String, IdxSet<VehicleJourney>> = model
         .lines
@@ -56,9 +54,9 @@ pub fn apply_rules(
         .collect();
 
     let mut collections = model.into_collections();
-    if let Some(configuration) = configuration {
+    if let Some(object_rule) = object_rule {
         info!("Applying object rules");
-        collections = object_rule::apply_rules(configuration, collections, &mut report)?;
+        object_rule.apply_rules(&mut collections, &mut report)?;
     }
 
     info!("Applying complementary code rules");
