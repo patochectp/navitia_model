@@ -39,6 +39,36 @@ pub struct ObjectProperties {
     grouped_from: Vec<String>,
 }
 
+impl ObjectProperties {
+    pub fn get_value(&self, key: &str) -> Option<String> {
+        self.properties
+            .get(key)
+            .and_then(|value| String::deserialize(value).ok())
+    }
+}
+
+fn get_opt_value_string_from_properties(
+    property: &serde_json::value::Value,
+    key: &str,
+    default_value: Option<String>,
+) -> Option<String> {
+    property
+        .get(key)
+        .and_then(|value| String::deserialize(value).ok())
+        .or_else(|| default_value)
+}
+
+fn get_opt_value_number_from_properties(
+    property: &serde_json::value::Value,
+    key: &str,
+    default_value: Option<u32>,
+) -> Option<u32> {
+    property
+        .get(key)
+        .and_then(|value| u32::deserialize(value).ok())
+        .or_else(|| default_value)
+}
+
 #[derive(Debug, Deserialize)]
 struct ObjectRuleConfiguration {
     #[serde(rename = "networks")]
@@ -137,39 +167,6 @@ impl ObjectRule {
     }
 }
 
-fn get_value_string_from_properties(
-    property: &serde_json::value::Value,
-    key: &str,
-    default_value: &str,
-) -> String {
-    property
-        .get(key)
-        .and_then(|value| String::deserialize(value).ok())
-        .unwrap_or_else(|| default_value.to_string())
-}
-
-fn get_opt_value_string_from_properties(
-    property: &serde_json::value::Value,
-    key: &str,
-    default_value: Option<String>,
-) -> Option<String> {
-    property
-        .get(key)
-        .and_then(|value| String::deserialize(value).ok())
-        .or_else(|| default_value)
-}
-
-fn get_opt_value_number_from_properties(
-    property: &serde_json::value::Value,
-    key: &str,
-    default_value: Option<u32>,
-) -> Option<u32> {
-    property
-        .get(key)
-        .and_then(|value| u32::deserialize(value).ok())
-        .or_else(|| default_value)
-}
-
 fn check_and_apply_physical_modes_rules(
     report: &mut Report<TransitModelReportCategory>,
     collections: &mut Collections,
@@ -189,11 +186,9 @@ fn check_and_apply_physical_modes_rules(
             .unwrap();
 
         if let Some(mut physical_mode) = collections.physical_modes.get_mut(physical_mode_id) {
-            physical_mode.name = get_value_string_from_properties(
-                &pyr.properties,
-                "physical_mode_name",
-                &physical_mode.name,
-            );
+            physical_mode.name = pyr
+                .get_value("physical_mode_name")
+                .unwrap_or_else(|| physical_mode.name.clone());
         } else if !CO2_EMISSIONS.contains_key(physical_mode_id) {
             report.add_error(
                 format!(
@@ -265,11 +260,9 @@ fn check_and_apply_commercial_modes_rules(
 
         if let Some(mut commercial_mode) = collections.commercial_modes.get_mut(commercial_mode_id)
         {
-            commercial_mode.name = get_value_string_from_properties(
-                &pyr.properties,
-                "commercial_mode_name",
-                &commercial_mode.name,
-            );
+            commercial_mode.name = pyr
+                .get_value("commercial_mode_name")
+                .unwrap_or_else(|| commercial_mode.name.clone());
         }
         let mut commercial_mode_rule = pyr.grouped_from.is_empty();
         for cm_grouped in &pyr.grouped_from {
@@ -329,8 +322,9 @@ fn check_and_apply_networks_rules(
             .unwrap();
 
         if let Some(mut network) = collections.networks.get_mut(network_id) {
-            network.name =
-                get_value_string_from_properties(&pyr.properties, "network_name", &network.name);
+            network.name = pyr
+                .get_value("network_name")
+                .unwrap_or_else(|| network.name.clone());
             network.url = get_opt_value_string_from_properties(
                 &pyr.properties,
                 "network_url",
