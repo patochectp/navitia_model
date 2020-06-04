@@ -34,8 +34,7 @@ use std::{
 
 #[derive(Debug, Deserialize)]
 pub struct ObjectProperties {
-    #[serde(flatten)]
-    properties: HashMap<String, Value>,
+    properties: Value,
     #[serde(default)]
     grouped_from: Vec<String>,
 }
@@ -182,12 +181,8 @@ fn check_and_apply_physical_modes_rules(
     let mut new_physical_modes: Vec<PhysicalMode> = vec![];
 
     for pyr in physical_modes_rules.iter() {
-        let properties = pyr
+        let physical_mode_id = pyr
             .properties
-            .get("properties")
-            .ok_or_else(|| format_err!("Object \"properties\" is required"))?;
-
-        let physical_mode_id = properties
             .get("physical_mode_id")
             .ok_or_else(|| format_err!("Key \"physical_mode_id\" is required"))?
             .as_str()
@@ -195,7 +190,7 @@ fn check_and_apply_physical_modes_rules(
 
         if let Some(mut physical_mode) = collections.physical_modes.get_mut(physical_mode_id) {
             physical_mode.name = get_value_string_from_properties(
-                properties,
+                &pyr.properties,
                 "physical_mode_name",
                 &physical_mode.name,
             );
@@ -238,7 +233,7 @@ fn check_and_apply_physical_modes_rules(
                 TransitModelReportCategory::ObjectNotFound,
             );
         } else if !collections.physical_modes.contains_id(physical_mode_id) {
-            new_physical_modes.push(serde_json::from_value(properties.clone())?);
+            new_physical_modes.push(serde_json::from_value(pyr.properties.clone())?);
         }
     }
     collections
@@ -261,12 +256,8 @@ fn check_and_apply_commercial_modes_rules(
     let mut new_commercial_modes: Vec<CommercialMode> = vec![];
 
     for pyr in commercial_modes_rules.iter() {
-        let properties = pyr
+        let commercial_mode_id = pyr
             .properties
-            .get("properties")
-            .ok_or_else(|| format_err!("Object \"properties\" is required"))?;
-
-        let commercial_mode_id = properties
             .get("commercial_mode_id")
             .ok_or_else(|| format_err!("Key \"commercial_mode_id is required"))?
             .as_str()
@@ -275,7 +266,7 @@ fn check_and_apply_commercial_modes_rules(
         if let Some(mut commercial_mode) = collections.commercial_modes.get_mut(commercial_mode_id)
         {
             commercial_mode.name = get_value_string_from_properties(
-                properties,
+                &pyr.properties,
                 "commercial_mode_name",
                 &commercial_mode.name,
             );
@@ -307,7 +298,7 @@ fn check_and_apply_commercial_modes_rules(
                 TransitModelReportCategory::ObjectNotFound,
             );
         } else if !collections.commercial_modes.contains_id(commercial_mode_id) {
-            new_commercial_modes.push(serde_json::from_value(properties.clone())?);
+            new_commercial_modes.push(serde_json::from_value(pyr.properties.clone())?);
         }
     }
     collections
@@ -330,12 +321,8 @@ fn check_and_apply_networks_rules(
     let mut new_networks: Vec<Network> = vec![];
 
     for pyr in networks_rules.iter() {
-        let properties = pyr
+        let network_id = pyr
             .properties
-            .get("properties")
-            .ok_or_else(|| format_err!("Object \"properties\" is required"))?;
-
-        let network_id = properties
             .get("network_id")
             .ok_or_else(|| format_err!("Key \"network_id is required"))?
             .as_str()
@@ -343,34 +330,34 @@ fn check_and_apply_networks_rules(
 
         if let Some(mut network) = collections.networks.get_mut(network_id) {
             network.name =
-                get_value_string_from_properties(properties, "network_name", &network.name);
+                get_value_string_from_properties(&pyr.properties, "network_name", &network.name);
             network.url = get_opt_value_string_from_properties(
-                properties,
+                &pyr.properties,
                 "network_url",
                 network.url.clone(),
             );
             network.timezone = get_opt_value_string_from_properties(
-                properties,
+                &pyr.properties,
                 "network_timezone",
                 network.timezone.clone(),
             );
             network.lang = get_opt_value_string_from_properties(
-                properties,
+                &pyr.properties,
                 "network_lang",
                 network.lang.clone(),
             );
             network.phone = get_opt_value_string_from_properties(
-                properties,
+                &pyr.properties,
                 "network_phone",
                 network.phone.clone(),
             );
             network.address = get_opt_value_string_from_properties(
-                properties,
+                &pyr.properties,
                 "network_address",
                 network.address.clone(),
             );
             network.sort_order = get_opt_value_number_from_properties(
-                properties,
+                &pyr.properties,
                 "network_sort_order",
                 network.sort_order,
             );
@@ -405,7 +392,7 @@ fn check_and_apply_networks_rules(
                 TransitModelReportCategory::ObjectNotFound,
             );
         } else if !collections.networks.contains_id(network_id) {
-            new_networks.push(serde_json::from_value(properties.clone())?);
+            new_networks.push(serde_json::from_value(pyr.properties.clone())?);
         }
     }
     collections
