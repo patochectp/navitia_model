@@ -40,33 +40,11 @@ pub struct ObjectProperties {
 }
 
 impl ObjectProperties {
-    pub fn get_value(&self, key: &str) -> Option<String> {
+    pub fn get_value<'de, T: Deserialize<'de>>(&'de self, key: &str) -> Option<T> {
         self.properties
             .get(key)
-            .and_then(|value| String::deserialize(value).ok())
+            .and_then(|value| T::deserialize(value).ok())
     }
-}
-
-fn get_opt_value_string_from_properties(
-    property: &serde_json::value::Value,
-    key: &str,
-    default_value: Option<String>,
-) -> Option<String> {
-    property
-        .get(key)
-        .and_then(|value| String::deserialize(value).ok())
-        .or_else(|| default_value)
-}
-
-fn get_opt_value_number_from_properties(
-    property: &serde_json::value::Value,
-    key: &str,
-    default_value: Option<u32>,
-) -> Option<u32> {
-    property
-        .get(key)
-        .and_then(|value| u32::deserialize(value).ok())
-        .or_else(|| default_value)
 }
 
 #[derive(Debug, Deserialize)]
@@ -325,36 +303,24 @@ fn check_and_apply_networks_rules(
             network.name = pyr
                 .get_value("network_name")
                 .unwrap_or_else(|| network.name.clone());
-            network.url = get_opt_value_string_from_properties(
-                &pyr.properties,
-                "network_url",
-                network.url.clone(),
-            );
-            network.timezone = get_opt_value_string_from_properties(
-                &pyr.properties,
-                "network_timezone",
-                network.timezone.clone(),
-            );
-            network.lang = get_opt_value_string_from_properties(
-                &pyr.properties,
-                "network_lang",
-                network.lang.clone(),
-            );
-            network.phone = get_opt_value_string_from_properties(
-                &pyr.properties,
-                "network_phone",
-                network.phone.clone(),
-            );
-            network.address = get_opt_value_string_from_properties(
-                &pyr.properties,
-                "network_address",
-                network.address.clone(),
-            );
-            network.sort_order = get_opt_value_number_from_properties(
-                &pyr.properties,
-                "network_sort_order",
-                network.sort_order,
-            );
+            network.url = pyr
+                .get_value("network_url")
+                .unwrap_or_else(|| network.url.clone());
+            network.timezone = pyr
+                .get_value("network_timezone")
+                .unwrap_or_else(|| network.timezone.clone());
+            network.lang = pyr
+                .get_value("network_lang")
+                .unwrap_or_else(|| network.lang.clone());
+            network.phone = pyr
+                .get_value("network_phone")
+                .unwrap_or_else(|| network.phone.clone());
+            network.address = pyr
+                .get_value("network_address")
+                .unwrap_or_else(|| network.address.clone());
+            network.sort_order = pyr
+                .get_value("network_sort_order")
+                .unwrap_or_else(|| network.sort_order);
         }
         let mut network_rule = pyr.grouped_from.is_empty();
         for grouped in &pyr.grouped_from {
