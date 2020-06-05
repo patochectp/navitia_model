@@ -300,27 +300,27 @@ fn check_and_apply_networks_rules(
             .unwrap();
 
         if let Some(mut network) = collections.networks.get_mut(network_id) {
-            network.name = pyr
-                .get_value("network_name")
-                .unwrap_or_else(|| network.name.clone());
-            network.url = pyr
-                .get_value("network_url")
-                .unwrap_or_else(|| network.url.clone());
-            network.timezone = pyr
-                .get_value("network_timezone")
-                .unwrap_or_else(|| network.timezone.clone());
-            network.lang = pyr
-                .get_value("network_lang")
-                .unwrap_or_else(|| network.lang.clone());
-            network.phone = pyr
-                .get_value("network_phone")
-                .unwrap_or_else(|| network.phone.clone());
-            network.address = pyr
-                .get_value("network_address")
-                .unwrap_or_else(|| network.address.clone());
-            network.sort_order = pyr
-                .get_value("network_sort_order")
-                .unwrap_or_else(|| network.sort_order);
+            if let Some(network_name) = pyr.get_value("network_name") {
+                network.name = network_name;
+            }
+            if let Some(network_url) = pyr.get_value("network_url") {
+                network.url = network_url;
+            }
+            if let Some(network_timezone) = pyr.get_value("network_timezone") {
+                network.timezone = network_timezone;
+            }
+            if let Some(network_lang) = pyr.get_value("network_lang") {
+                network.lang = network_lang;
+            }
+            if let Some(network_phone) = pyr.get_value("network_phone") {
+                network.phone = network_phone;
+            }
+            if let Some(network_address) = pyr.get_value("network_address") {
+                network.address = network_address;
+            }
+            if let Some(network_sort_order) = pyr.get_value("network_sort_order") {
+                network.sort_order = network_sort_order;
+            }
         }
         let mut network_rule = pyr.grouped_from.is_empty();
         for grouped in &pyr.grouped_from {
