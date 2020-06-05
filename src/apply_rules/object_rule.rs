@@ -232,7 +232,7 @@ fn check_and_apply_commercial_modes_rules(
         let commercial_mode_id = pyr
             .properties
             .get("commercial_mode_id")
-            .ok_or_else(|| format_err!("Key \"commercial_mode_id is required"))?
+            .ok_or_else(|| format_err!("Key \"commercial_mode_id\" is required"))?
             .as_str()
             .unwrap();
 
@@ -295,7 +295,7 @@ fn check_and_apply_networks_rules(
         let network_id = pyr
             .properties
             .get("network_id")
-            .ok_or_else(|| format_err!("Key \"network_id is required"))?
+            .ok_or_else(|| format_err!("Key \"network_id\" is required"))?
             .as_str()
             .unwrap();
 
