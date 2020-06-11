@@ -2,7 +2,7 @@
   "errors": [
     {
       "category": "ObjectNotFound",
-      "message": "The grouped network \"TGS\" don't exist"
+      "message": "The identifier \"TGS\" to regroup doesn't exist"
     },
     {
       "category": "ObjectNotFound",

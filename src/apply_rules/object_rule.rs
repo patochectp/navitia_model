@@ -31,6 +31,7 @@ use std::{
     fs::File,
     path::Path,
 };
+use typed_index_collection::CollectionWithId;
 
 #[derive(Debug, Deserialize)]
 pub struct ObjectProperties {
@@ -163,6 +164,29 @@ impl ObjectProperties {
             Ok(Some(id))
         }
     }
+
+    fn regroup<T, F>(
+        &self,
+        collection: &CollectionWithId<T>,
+        report: &mut Report<TransitModelReportCategory>,
+        mut f: F,
+    ) -> Result<bool>
+    where
+        F: FnMut(&str) -> bool,
+    {
+        let mut changed = false;
+        for regroup_id in &self.grouped_from {
+            if !collection.contains_id(&regroup_id) {
+                report.add_error(
+                    format!("The identifier \"{}\" to regroup doesn't exist", regroup_id),
+                    TransitModelReportCategory::ObjectNotFound,
+                );
+            } else {
+                changed = f(regroup_id) || changed;
+            }
+        }
+        Ok(changed)
+    }
 }
 
 fn check_and_apply_physical_modes_rules(
@@ -181,26 +205,21 @@ fn check_and_apply_physical_modes_rules(
                 new_physical_modes.push(serde_json::from_value(pyr.properties.clone())?)
             }
 
-            let mut physical_mode_rule = false;
-            for pm_grouped in &pyr.grouped_from {
-                if !collections.physical_modes.contains_id(&pm_grouped) {
-                    report.add_error(
-                        format!("The grouped physical mode \"{}\" don't exist", pm_grouped),
-                        TransitModelReportCategory::ObjectNotFound,
-                    );
-                } else {
-                    if let Some(trips) = vjs_by_physical_mode.get(pm_grouped) {
-                        for trip_idx in trips {
-                            collections
-                                .vehicle_journeys
-                                .index_mut(*trip_idx)
-                                .physical_mode_id = physical_mode_id.to_string();
-                        }
-                        physical_modes_to_remove.insert(pm_grouped.to_string());
+            let physical_modes = &collections.physical_modes;
+            let c_vehicle_journeys = &mut collections.vehicle_journeys;
+            let physical_mode_rule = pyr.regroup(physical_modes, report, |regroup_id| {
+                if let Some(vehicle_journeys) = vjs_by_physical_mode.get(regroup_id) {
+                    for vehicle_journey_idx in vehicle_journeys {
+                        c_vehicle_journeys
+                            .index_mut(*vehicle_journey_idx)
+                            .physical_mode_id = physical_mode_id.to_string();
                     }
-                    physical_mode_rule = true;
+                    physical_modes_to_remove.insert(regroup_id.to_string());
+                    true
+                } else {
+                    false
                 }
-            }
+            })?;
             if !physical_mode_rule {
                 report.add_error(
                     format!(
@@ -237,24 +256,20 @@ fn check_and_apply_commercial_modes_rules(
                 new_commercial_modes.push(serde_json::from_value(pyr.properties.clone())?)
             }
 
-            let mut commercial_mode_rule = false;
-            for cm_grouped in &pyr.grouped_from {
-                if !collections.commercial_modes.contains_id(&cm_grouped) {
-                    report.add_error(
-                        format!("The grouped commercial mode \"{}\" don't exist", cm_grouped),
-                        TransitModelReportCategory::ObjectNotFound,
-                    );
-                } else {
-                    if let Some(lines) = lines_by_commercial_mode.get(cm_grouped) {
-                        for line_idx in lines {
-                            collections.lines.index_mut(*line_idx).commercial_mode_id =
-                                commercial_mode_id.to_string();
-                        }
-                        commercial_modes_to_remove.insert(cm_grouped.to_string());
+            let commercial_modes = &collections.commercial_modes;
+            let c_lines = &mut collections.lines;
+            let commercial_mode_rule = pyr.regroup(commercial_modes, report, |regroup_id| {
+                if let Some(lines) = lines_by_commercial_mode.get(regroup_id) {
+                    for line_idx in lines {
+                        c_lines.index_mut(*line_idx).commercial_mode_id =
+                            commercial_mode_id.to_string();
                     }
-                    commercial_mode_rule = true;
+                    commercial_modes_to_remove.insert(regroup_id.to_string());
+                    true
+                } else {
+                    false
                 }
-            }
+            })?;
             if !commercial_mode_rule {
                 report.add_error(
                     format!(
@@ -290,31 +305,26 @@ fn check_and_apply_networks_rules(
             if !collections.networks.contains_id(network_id) {
                 new_networks.push(serde_json::from_value(pyr.properties.clone())?)
             }
-            let mut network_rule = false;
-            for grouped in &pyr.grouped_from {
-                if !collections.networks.contains_id(&grouped) {
-                    report.add_error(
-                        format!("The grouped network \"{}\" don't exist", grouped),
-                        TransitModelReportCategory::ObjectNotFound,
-                    );
-                } else {
-                    if let Some(lines) = lines_by_network.get(grouped) {
-                        for line_idx in lines {
-                            collections.lines.index_mut(*line_idx).network_id =
-                                network_id.to_string();
-                        }
-
-                        collections
-                            .ticket_use_perimeters
-                            .values_mut()
-                            .filter(|ticket| ticket.object_type == ModelObjectType::Network)
-                            .filter(|ticket| &ticket.object_id == grouped)
-                            .for_each(|mut ticket| ticket.object_id = network_id.to_string());
-                        networks_to_remove.insert(grouped.to_string());
+            let networks = &collections.networks;
+            let c_lines = &mut collections.lines;
+            let c_ticket_use_perimeters = &mut collections.ticket_use_perimeters;
+            let network_rule = pyr.regroup(networks, report, |regroup_id| {
+                if let Some(lines) = lines_by_network.get(regroup_id) {
+                    for line_idx in lines {
+                        c_lines.index_mut(*line_idx).network_id = network_id.to_string();
                     }
-                    network_rule = true;
+
+                    c_ticket_use_perimeters
+                        .values_mut()
+                        .filter(|ticket| ticket.object_type == ModelObjectType::Network)
+                        .filter(|ticket| &ticket.object_id == regroup_id)
+                        .for_each(|mut ticket| ticket.object_id = network_id.to_string());
+                    networks_to_remove.insert(regroup_id.to_string());
+                    true
+                } else {
+                    false
                 }
-            }
+            })?;
             if !network_rule {
                 report.add_error(
                     format!("The rule on the \"{}\" network was not applied", network_id),
