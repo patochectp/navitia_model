@@ -14,9 +14,7 @@
 
 use crate::{
     model::{Collections, Model},
-    objects::{
-        CommercialMode, Line, Network, ObjectType as ModelObjectType, PhysicalMode, VehicleJourney,
-    },
+    objects::{Line, ObjectType as ModelObjectType, VehicleJourney},
     report::{Report, TransitModelReportCategory},
     Result,
 };
@@ -191,12 +189,12 @@ fn check_and_apply_physical_modes_rules(
     vjs_by_physical_mode: &HashMap<String, IdxSet<VehicleJourney>>,
 ) -> Result<()> {
     info!("Checking physical modes rules.");
-    let mut new_physical_modes: Vec<PhysicalMode> = vec![];
-
     for pyr in physical_modes_rules {
         if let Some(physical_mode_id) = pyr.check("physical_mode_id", report)? {
             if !collections.physical_modes.contains_id(physical_mode_id) {
-                new_physical_modes.push(serde_json::from_value(pyr.properties.clone())?)
+                collections
+                    .physical_modes
+                    .push(serde_json::from_value(pyr.properties.clone())?)?;
             }
 
             let physical_modes = &collections.physical_modes;
@@ -227,9 +225,6 @@ fn check_and_apply_physical_modes_rules(
             .physical_modes
             .retain(|physical_mode| !pyr.grouped_from.contains(&physical_mode.id));
     }
-
-    collections.physical_modes.extend(new_physical_modes);
-
     Ok(())
 }
 
@@ -240,12 +235,12 @@ fn check_and_apply_commercial_modes_rules(
     lines_by_commercial_mode: &HashMap<String, IdxSet<Line>>,
 ) -> Result<()> {
     info!("Checking commercial modes rules.");
-    let mut new_commercial_modes: Vec<CommercialMode> = vec![];
-
     for pyr in commercial_modes_rules {
         if let Some(commercial_mode_id) = pyr.check("commercial_mode_id", report)? {
             if !collections.commercial_modes.contains_id(commercial_mode_id) {
-                new_commercial_modes.push(serde_json::from_value(pyr.properties.clone())?)
+                collections
+                    .commercial_modes
+                    .push(serde_json::from_value(pyr.properties.clone())?)?;
             }
 
             let commercial_modes = &collections.commercial_modes;
@@ -275,9 +270,6 @@ fn check_and_apply_commercial_modes_rules(
             .commercial_modes
             .retain(|commercial_mode| !pyr.grouped_from.contains(&commercial_mode.id));
     }
-
-    collections.commercial_modes.extend(new_commercial_modes);
-
     Ok(())
 }
 
@@ -288,12 +280,12 @@ fn check_and_apply_networks_rules(
     lines_by_network: &HashMap<String, IdxSet<Line>>,
 ) -> Result<()> {
     info!("Checking networks rules.");
-    let mut new_networks: Vec<Network> = vec![];
-
     for pyr in networks_rules {
         if let Some(network_id) = pyr.check("network_id", report)? {
             if !collections.networks.contains_id(network_id) {
-                new_networks.push(serde_json::from_value(pyr.properties.clone())?)
+                collections
+                    .networks
+                    .push(serde_json::from_value(pyr.properties.clone())?)?;
             }
             let networks = &collections.networks;
             let c_lines = &mut collections.lines;
@@ -325,9 +317,6 @@ fn check_and_apply_networks_rules(
             .networks
             .retain(|network| !pyr.grouped_from.contains(&network.id));
     }
-
-    collections.networks.extend(new_networks);
-
     Ok(())
 }
 
