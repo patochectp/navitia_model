@@ -199,7 +199,7 @@ fn check_and_apply_physical_modes_rules(
     let mut physical_modes_to_remove: HashSet<String> = HashSet::new();
     let mut new_physical_modes: Vec<PhysicalMode> = vec![];
 
-    for pyr in physical_modes_rules.iter() {
+    for pyr in physical_modes_rules {
         if let Some(physical_mode_id) = pyr.check("physical_mode_id", report)? {
             if !collections.physical_modes.contains_id(physical_mode_id) {
                 new_physical_modes.push(serde_json::from_value(pyr.properties.clone())?)
@@ -250,7 +250,7 @@ fn check_and_apply_commercial_modes_rules(
     let mut commercial_modes_to_remove: HashSet<String> = HashSet::new();
     let mut new_commercial_modes: Vec<CommercialMode> = vec![];
 
-    for pyr in commercial_modes_rules.iter() {
+    for pyr in commercial_modes_rules {
         if let Some(commercial_mode_id) = pyr.check("commercial_mode_id", report)? {
             if !collections.commercial_modes.contains_id(commercial_mode_id) {
                 new_commercial_modes.push(serde_json::from_value(pyr.properties.clone())?)
@@ -300,7 +300,7 @@ fn check_and_apply_networks_rules(
     let mut networks_to_remove: HashSet<String> = HashSet::new();
     let mut new_networks: Vec<Network> = vec![];
 
-    for pyr in networks_rules.iter() {
+    for pyr in networks_rules {
         if let Some(network_id) = pyr.check("network_id", report)? {
             if !collections.networks.contains_id(network_id) {
                 new_networks.push(serde_json::from_value(pyr.properties.clone())?)
