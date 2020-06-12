@@ -196,7 +196,6 @@ fn check_and_apply_physical_modes_rules(
     vjs_by_physical_mode: &HashMap<String, IdxSet<VehicleJourney>>,
 ) -> Result<()> {
     info!("Checking physical modes rules.");
-    let mut physical_modes_to_remove: HashSet<String> = HashSet::new();
     let mut new_physical_modes: Vec<PhysicalMode> = vec![];
 
     for pyr in physical_modes_rules {
@@ -214,7 +213,6 @@ fn check_and_apply_physical_modes_rules(
                             .index_mut(*vehicle_journey_idx)
                             .physical_mode_id = physical_mode_id.to_string();
                     }
-                    physical_modes_to_remove.insert(regroup_id.to_string());
                     true
                 } else {
                     false
@@ -230,10 +228,10 @@ fn check_and_apply_physical_modes_rules(
                 );
             }
         }
+        collections
+            .physical_modes
+            .retain(|physical_mode| !pyr.grouped_from.contains(&physical_mode.id));
     }
-    collections
-        .physical_modes
-        .retain(|cm| !physical_modes_to_remove.contains(&cm.id));
 
     collections.physical_modes.extend(new_physical_modes);
 
@@ -247,7 +245,6 @@ fn check_and_apply_commercial_modes_rules(
     lines_by_commercial_mode: &HashMap<String, IdxSet<Line>>,
 ) -> Result<()> {
     info!("Checking commercial modes rules.");
-    let mut commercial_modes_to_remove: HashSet<String> = HashSet::new();
     let mut new_commercial_modes: Vec<CommercialMode> = vec![];
 
     for pyr in commercial_modes_rules {
@@ -264,7 +261,6 @@ fn check_and_apply_commercial_modes_rules(
                         c_lines.index_mut(*line_idx).commercial_mode_id =
                             commercial_mode_id.to_string();
                     }
-                    commercial_modes_to_remove.insert(regroup_id.to_string());
                     true
                 } else {
                     false
@@ -280,10 +276,10 @@ fn check_and_apply_commercial_modes_rules(
                 );
             }
         }
+        collections
+            .commercial_modes
+            .retain(|commercial_mode| !pyr.grouped_from.contains(&commercial_mode.id));
     }
-    collections
-        .commercial_modes
-        .retain(|cm| !commercial_modes_to_remove.contains(&cm.id));
 
     collections.commercial_modes.extend(new_commercial_modes);
 
@@ -297,7 +293,6 @@ fn check_and_apply_networks_rules(
     lines_by_network: &HashMap<String, IdxSet<Line>>,
 ) -> Result<()> {
     info!("Checking networks rules.");
-    let mut networks_to_remove: HashSet<String> = HashSet::new();
     let mut new_networks: Vec<Network> = vec![];
 
     for pyr in networks_rules {
@@ -319,7 +314,6 @@ fn check_and_apply_networks_rules(
                         .filter(|ticket| ticket.object_type == ModelObjectType::Network)
                         .filter(|ticket| &ticket.object_id == regroup_id)
                         .for_each(|mut ticket| ticket.object_id = network_id.to_string());
-                    networks_to_remove.insert(regroup_id.to_string());
                     true
                 } else {
                     false
@@ -332,10 +326,10 @@ fn check_and_apply_networks_rules(
                 );
             }
         }
+        collections
+            .networks
+            .retain(|network| !pyr.grouped_from.contains(&network.id));
     }
-    collections
-        .networks
-        .retain(|cm| !networks_to_remove.contains(&cm.id));
 
     collections.networks.extend(new_networks);
 
