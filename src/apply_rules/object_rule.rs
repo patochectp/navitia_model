@@ -25,12 +25,7 @@ use log::info;
 use relational_types::IdxSet;
 use serde::Deserialize;
 use serde_json::Value;
-use std::{
-    collections::{HashMap, HashSet},
-    convert::TryFrom,
-    fs::File,
-    path::Path,
-};
+use std::{collections::HashMap, convert::TryFrom, fs::File, path::Path};
 use typed_index_collection::CollectionWithId;
 
 #[derive(Debug, Deserialize)]
@@ -169,20 +164,20 @@ impl ObjectProperties {
         &self,
         collection: &CollectionWithId<T>,
         report: &mut Report<TransitModelReportCategory>,
-        mut f: F,
+        mut update: F,
     ) -> Result<bool>
     where
         F: FnMut(&str) -> bool,
     {
         let mut changed = false;
-        for regroup_id in &self.grouped_from {
-            if !collection.contains_id(&regroup_id) {
+        for grouped_id in &self.grouped_from {
+            if !collection.contains_id(&grouped_id) {
                 report.add_error(
-                    format!("The identifier \"{}\" to regroup doesn't exist", regroup_id),
+                    format!("The identifier \"{}\" to regroup doesn't exist", grouped_id),
                     TransitModelReportCategory::ObjectNotFound,
                 );
             } else {
-                changed = f(regroup_id) || changed;
+                changed = update(grouped_id) || changed;
             }
         }
         Ok(changed)
@@ -206,8 +201,8 @@ fn check_and_apply_physical_modes_rules(
 
             let physical_modes = &collections.physical_modes;
             let c_vehicle_journeys = &mut collections.vehicle_journeys;
-            let physical_mode_rule = pyr.regroup(physical_modes, report, |regroup_id| {
-                if let Some(vehicle_journeys) = vjs_by_physical_mode.get(regroup_id) {
+            let physical_mode_rule = pyr.regroup(physical_modes, report, |removed_id| {
+                if let Some(vehicle_journeys) = vjs_by_physical_mode.get(removed_id) {
                     for vehicle_journey_idx in vehicle_journeys {
                         c_vehicle_journeys
                             .index_mut(*vehicle_journey_idx)
@@ -255,8 +250,8 @@ fn check_and_apply_commercial_modes_rules(
 
             let commercial_modes = &collections.commercial_modes;
             let c_lines = &mut collections.lines;
-            let commercial_mode_rule = pyr.regroup(commercial_modes, report, |regroup_id| {
-                if let Some(lines) = lines_by_commercial_mode.get(regroup_id) {
+            let commercial_mode_rule = pyr.regroup(commercial_modes, report, |removed_id| {
+                if let Some(lines) = lines_by_commercial_mode.get(removed_id) {
                     for line_idx in lines {
                         c_lines.index_mut(*line_idx).commercial_mode_id =
                             commercial_mode_id.to_string();
@@ -303,8 +298,8 @@ fn check_and_apply_networks_rules(
             let networks = &collections.networks;
             let c_lines = &mut collections.lines;
             let c_ticket_use_perimeters = &mut collections.ticket_use_perimeters;
-            let network_rule = pyr.regroup(networks, report, |regroup_id| {
-                if let Some(lines) = lines_by_network.get(regroup_id) {
+            let network_rule = pyr.regroup(networks, report, |removed_id| {
+                if let Some(lines) = lines_by_network.get(removed_id) {
                     for line_idx in lines {
                         c_lines.index_mut(*line_idx).network_id = network_id.to_string();
                     }
@@ -312,7 +307,7 @@ fn check_and_apply_networks_rules(
                     c_ticket_use_perimeters
                         .values_mut()
                         .filter(|ticket| ticket.object_type == ModelObjectType::Network)
-                        .filter(|ticket| &ticket.object_id == regroup_id)
+                        .filter(|ticket| &ticket.object_id == removed_id)
                         .for_each(|mut ticket| ticket.object_id = network_id.to_string());
                     true
                 } else {
