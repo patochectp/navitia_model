@@ -21,10 +21,10 @@ use crate::{
 use failure::format_err;
 use log::info;
 use relational_types::IdxSet;
-use serde::Deserialize;
+use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::Value;
 use std::{collections::HashMap, convert::TryFrom, fs::File, path::Path};
-use typed_index_collection::CollectionWithId;
+use typed_index_collection::{CollectionWithId, Id};
 
 #[derive(Debug, Deserialize)]
 pub struct ObjectProperties {
@@ -160,12 +160,13 @@ impl ObjectProperties {
 
     fn regroup<T, F>(
         &self,
+        id: &'_ str,
         collection: &CollectionWithId<T>,
         report: &mut Report<TransitModelReportCategory>,
         mut update: F,
     ) -> Result<bool>
     where
-        F: FnMut(&str) -> bool,
+        F: FnMut(&str, &str) -> bool,
     {
         let mut changed = false;
         for grouped_id in &self.grouped_from {
@@ -175,149 +176,38 @@ impl ObjectProperties {
                     TransitModelReportCategory::ObjectNotFound,
                 );
             } else {
-                changed = update(grouped_id) || changed;
+                changed = update(id, grouped_id) || changed;
             }
         }
         Ok(changed)
     }
-}
-
-fn check_and_apply_physical_modes_rules(
-    report: &mut Report<TransitModelReportCategory>,
-    collections: &mut Collections,
-    physical_modes_rules: &[ObjectProperties],
-    vjs_by_physical_mode: &HashMap<String, IdxSet<VehicleJourney>>,
-) -> Result<()> {
-    info!("Checking physical modes rules.");
-    for pyr in physical_modes_rules {
-        if let Some(physical_mode_id) = pyr.check("physical_mode_id", report)? {
-            if !collections.physical_modes.contains_id(physical_mode_id) {
-                collections
-                    .physical_modes
-                    .push(serde_json::from_value(pyr.properties.clone())?)?;
+    fn apply<T, F>(
+        &self,
+        id_key: &'_ str,
+        collection: &mut CollectionWithId<T>,
+        report: &mut Report<TransitModelReportCategory>,
+        update: F,
+    ) -> Result<()>
+    where
+        T: DeserializeOwned + Id<T>,
+        F: FnMut(&str, &str) -> bool,
+    {
+        if let Some(id) = self.check(id_key, report)? {
+            if !collection.contains_id(id) {
+                collection.push(serde_json::from_value(self.properties.clone())?)?;
             }
 
-            let physical_modes = &collections.physical_modes;
-            let c_vehicle_journeys = &mut collections.vehicle_journeys;
-            let physical_mode_rule = pyr.regroup(physical_modes, report, |removed_id| {
-                if let Some(vehicle_journeys) = vjs_by_physical_mode.get(removed_id) {
-                    for vehicle_journey_idx in vehicle_journeys {
-                        c_vehicle_journeys
-                            .index_mut(*vehicle_journey_idx)
-                            .physical_mode_id = physical_mode_id.to_string();
-                    }
-                    true
-                } else {
-                    false
-                }
-            })?;
-            if !physical_mode_rule {
+            let rule_applied = self.regroup(id, collection, report, update)?;
+            if !rule_applied {
                 report.add_error(
-                    format!(
-                        "The rule on the \"{}\" physical mode was not applied",
-                        physical_mode_id
-                    ),
+                    format!("The rule on \"{}\" was not applied", id),
                     TransitModelReportCategory::ObjectNotFound,
                 );
             }
         }
-        collections
-            .physical_modes
-            .retain(|physical_mode| !pyr.grouped_from.contains(&physical_mode.id));
+        collection.retain(|object| !self.grouped_from.contains(&String::from(object.id())));
+        Ok(())
     }
-    Ok(())
-}
-
-fn check_and_apply_commercial_modes_rules(
-    report: &mut Report<TransitModelReportCategory>,
-    collections: &mut Collections,
-    commercial_modes_rules: &[ObjectProperties],
-    lines_by_commercial_mode: &HashMap<String, IdxSet<Line>>,
-) -> Result<()> {
-    info!("Checking commercial modes rules.");
-    for pyr in commercial_modes_rules {
-        if let Some(commercial_mode_id) = pyr.check("commercial_mode_id", report)? {
-            if !collections.commercial_modes.contains_id(commercial_mode_id) {
-                collections
-                    .commercial_modes
-                    .push(serde_json::from_value(pyr.properties.clone())?)?;
-            }
-
-            let commercial_modes = &collections.commercial_modes;
-            let c_lines = &mut collections.lines;
-            let commercial_mode_rule = pyr.regroup(commercial_modes, report, |removed_id| {
-                if let Some(lines) = lines_by_commercial_mode.get(removed_id) {
-                    for line_idx in lines {
-                        c_lines.index_mut(*line_idx).commercial_mode_id =
-                            commercial_mode_id.to_string();
-                    }
-                    true
-                } else {
-                    false
-                }
-            })?;
-            if !commercial_mode_rule {
-                report.add_error(
-                    format!(
-                        "The rule on the \"{}\" commercial mode was not applied",
-                        commercial_mode_id
-                    ),
-                    TransitModelReportCategory::ObjectNotFound,
-                );
-            }
-        }
-        collections
-            .commercial_modes
-            .retain(|commercial_mode| !pyr.grouped_from.contains(&commercial_mode.id));
-    }
-    Ok(())
-}
-
-fn check_and_apply_networks_rules(
-    report: &mut Report<TransitModelReportCategory>,
-    collections: &mut Collections,
-    networks_rules: &[ObjectProperties],
-    lines_by_network: &HashMap<String, IdxSet<Line>>,
-) -> Result<()> {
-    info!("Checking networks rules.");
-    for pyr in networks_rules {
-        if let Some(network_id) = pyr.check("network_id", report)? {
-            if !collections.networks.contains_id(network_id) {
-                collections
-                    .networks
-                    .push(serde_json::from_value(pyr.properties.clone())?)?;
-            }
-            let networks = &collections.networks;
-            let c_lines = &mut collections.lines;
-            let c_ticket_use_perimeters = &mut collections.ticket_use_perimeters;
-            let network_rule = pyr.regroup(networks, report, |removed_id| {
-                if let Some(lines) = lines_by_network.get(removed_id) {
-                    for line_idx in lines {
-                        c_lines.index_mut(*line_idx).network_id = network_id.to_string();
-                    }
-
-                    c_ticket_use_perimeters
-                        .values_mut()
-                        .filter(|ticket| ticket.object_type == ModelObjectType::Network)
-                        .filter(|ticket| &ticket.object_id == removed_id)
-                        .for_each(|mut ticket| ticket.object_id = network_id.to_string());
-                    true
-                } else {
-                    false
-                }
-            })?;
-            if !network_rule {
-                report.add_error(
-                    format!("The rule on the \"{}\" network was not applied", network_id),
-                    TransitModelReportCategory::ObjectNotFound,
-                );
-            }
-        }
-        collections
-            .networks
-            .retain(|network| !pyr.grouped_from.contains(&network.id));
-    }
-    Ok(())
 }
 
 impl ObjectRule {
@@ -329,29 +219,78 @@ impl ObjectRule {
         if let (Some(networks_rules), Some(lines_by_network)) =
             (&self.configuration.networks_rules, &self.lines_by_network)
         {
-            check_and_apply_networks_rules(report, collections, networks_rules, lines_by_network)?;
+            info!("Checking networks rules.");
+            for rule in networks_rules {
+                let networks = &mut collections.networks;
+                let lines = &mut collections.lines;
+                let ticket_use_perimeters = &mut collections.ticket_use_perimeters;
+                let regroup_update = |network_id: &str, removed_id: &str| {
+                    if let Some(line_indexes) = lines_by_network.get(removed_id) {
+                        for line_idx in line_indexes {
+                            lines.index_mut(*line_idx).network_id = network_id.to_string();
+                        }
+                        ticket_use_perimeters
+                            .values_mut()
+                            .filter(|ticket| ticket.object_type == ModelObjectType::Network)
+                            .filter(|ticket| ticket.object_id == removed_id)
+                            .for_each(|mut ticket| ticket.object_id = network_id.to_string());
+                        true
+                    } else {
+                        false
+                    }
+                };
+                rule.apply("network_id", networks, report, regroup_update)?;
+            }
         };
         if let (Some(commercial_modes_rules), Some(lines_by_commercial_mode)) = (
             &self.configuration.commercial_modes_rules,
             &self.lines_by_commercial_mode,
         ) {
-            check_and_apply_commercial_modes_rules(
-                report,
-                collections,
-                commercial_modes_rules,
-                lines_by_commercial_mode,
-            )?;
+            info!("Checking commercial modes rules.");
+            for rule in commercial_modes_rules {
+                let commercial_modes = &mut collections.commercial_modes;
+                let lines = &mut collections.lines;
+                let regroup_update = |commercial_mode_id: &str, removed_id: &str| {
+                    if let Some(line_indexes) = lines_by_commercial_mode.get(removed_id) {
+                        for line_idx in line_indexes {
+                            lines.index_mut(*line_idx).commercial_mode_id =
+                                commercial_mode_id.to_string();
+                        }
+                        true
+                    } else {
+                        false
+                    }
+                };
+                rule.apply(
+                    "commercial_mode_id",
+                    commercial_modes,
+                    report,
+                    regroup_update,
+                )?;
+            }
         };
         if let (Some(physical_modes_rules), Some(vjs_by_physical_mode)) = (
             &self.configuration.physical_modes_rules,
             &self.vjs_by_physical_mode,
         ) {
-            check_and_apply_physical_modes_rules(
-                report,
-                collections,
-                physical_modes_rules,
-                vjs_by_physical_mode,
-            )?;
+            info!("Checking physical modes rules.");
+            for rule in physical_modes_rules {
+                let physical_modes = &mut collections.physical_modes;
+                let vehicle_journeys = &mut collections.vehicle_journeys;
+                let regroup_update = |physical_mode_id: &str, removed_id: &str| {
+                    if let Some(vehicle_journey_indexes) = vjs_by_physical_mode.get(removed_id) {
+                        for vehicle_journey_idx in vehicle_journey_indexes {
+                            vehicle_journeys
+                                .index_mut(*vehicle_journey_idx)
+                                .physical_mode_id = physical_mode_id.to_string();
+                        }
+                        true
+                    } else {
+                        false
+                    }
+                };
+                rule.apply("physical_mode_id", physical_modes, report, regroup_update)?;
+            }
         };
         Ok(())
     }

@@ -6,7 +6,7 @@
     },
     {
       "category": "ObjectNotFound",
-      "message": "The rule on the \"bus_vert\" network was not applied"
+      "message": "The rule on \"bus_vert\" was not applied"
     }
   ],
   "warnings": []
