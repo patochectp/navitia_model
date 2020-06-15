@@ -132,11 +132,7 @@ impl ObjectRule {
 }
 
 impl ObjectProperties {
-    fn check(
-        &self,
-        id_key: &'_ str,
-        report: &mut Report<TransitModelReportCategory>,
-    ) -> Result<Option<&str>> {
+    fn check(&self, id_key: &'_ str) -> Result<&str> {
         let id = self
             .properties
             .get(id_key)
@@ -144,18 +140,7 @@ impl ObjectProperties {
             .as_str()
             .ok_or_else(|| format_err!("Value for \"{}\" must be filled in", id_key))?;
 
-        if self.grouped_from.is_empty() {
-            report.add_error(
-                format!(
-                    "The list to group by \"{}\" is empty for consolidation in \"{}\"",
-                    id_key, id
-                ),
-                TransitModelReportCategory::ObjectNotFound,
-            );
-            Ok(None)
-        } else {
-            Ok(Some(id))
-        }
+        Ok(id)
     }
 
     fn regroup<T, F>(
@@ -192,18 +177,17 @@ impl ObjectProperties {
         T: DeserializeOwned + Id<T>,
         F: FnMut(&str, &str) -> bool,
     {
-        if let Some(id) = self.check(id_key, report)? {
-            if !collection.contains_id(id) {
-                collection.push(serde_json::from_value(self.properties.clone())?)?;
-            }
+        let id = self.check(id_key)?;
+        if !collection.contains_id(id) {
+            collection.push(serde_json::from_value(self.properties.clone())?)?;
+        }
 
-            let rule_applied = self.regroup(id, collection, report, update)?;
-            if !rule_applied {
-                report.add_error(
-                    format!("The rule on \"{}\" was not applied", id),
-                    TransitModelReportCategory::ObjectNotFound,
-                );
-            }
+        let rule_applied = self.regroup(id, collection, report, update)?;
+        if !rule_applied {
+            report.add_error(
+                format!("The rule on \"{}\" was not applied", id),
+                TransitModelReportCategory::ObjectNotFound,
+            );
         }
         collection.retain(|object| !self.grouped_from.contains(&String::from(object.id())));
         Ok(())

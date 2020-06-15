@@ -2,15 +2,15 @@
   "errors": [
     {
       "category": "ObjectNotFound",
-      "message": "The rule on the \"bus_vert\" network was not applied"
+      "message": "The rule on \"bus_vert\" was not applied"
     },
     {
       "category": "ObjectNotFound",
-      "message": "The rule on the \"TER\" commercial mode was not applied"
+      "message": "The rule on \"TER\" was not applied"
     },
     {
       "category": "ObjectNotFound",
-      "message": "The rule on the \"LongDistanceTrain\" physical mode was not applied"
+      "message": "The rule on \"LongDistanceTrain\" was not applied"
     }
   ],
   "warnings": []
