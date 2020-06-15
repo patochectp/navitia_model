@@ -2,15 +2,15 @@
   "errors": [
     {
       "category": "ObjectNotFound",
-      "message": "The rule on \"bus_vert\" was not applied"
+      "message": "The rule on identifier \"bus_vert\" was not applied"
     },
     {
       "category": "ObjectNotFound",
-      "message": "The rule on \"TER\" was not applied"
+      "message": "The rule on identifier \"TER\" was not applied"
     },
     {
       "category": "ObjectNotFound",
-      "message": "The rule on \"LongDistanceTrain\" was not applied"
+      "message": "The rule on identifier \"LongDistanceTrain\" was not applied"
     }
   ],
   "warnings": []

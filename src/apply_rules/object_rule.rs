@@ -157,7 +157,7 @@ impl ObjectProperties {
         for grouped_id in &self.grouped_from {
             if !collection.contains_id(&grouped_id) {
                 report.add_error(
-                    format!("The identifier \"{}\" to regroup doesn't exist", grouped_id),
+                    format!("The identifier \"{}\" doesn't exist, and therefore cannot be regrouped in \"{}\"", grouped_id, id),
                     TransitModelReportCategory::ObjectNotFound,
                 );
             } else {
@@ -185,7 +185,7 @@ impl ObjectProperties {
         let rule_applied = self.regroup(id, collection, report, update)?;
         if !rule_applied {
             report.add_error(
-                format!("The rule on \"{}\" was not applied", id),
+                format!("The rule on identifier \"{}\" was not applied", id),
                 TransitModelReportCategory::ObjectNotFound,
             );
         }

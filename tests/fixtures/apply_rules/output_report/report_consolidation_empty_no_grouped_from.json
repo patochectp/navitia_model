@@ -2,7 +2,7 @@
   "errors": [
     {
       "category": "ObjectNotFound",
-      "message": "The rule on \"TGM\" was not applied"
+      "message": "The rule on identifier \"TGM\" was not applied"
     }
   ],
   "warnings": []

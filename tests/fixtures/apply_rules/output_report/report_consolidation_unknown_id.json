@@ -2,11 +2,11 @@
   "errors": [
     {
       "category": "ObjectNotFound",
-      "message": "The identifier \"TGS\" to regroup doesn't exist"
+      "message": "The identifier \"TGS\" doesn't exist, and therefore cannot be regrouped in \"bus_vert\""
     },
     {
       "category": "ObjectNotFound",
-      "message": "The rule on \"bus_vert\" was not applied"
+      "message": "The rule on identifier \"bus_vert\" was not applied"
     }
   ],
   "warnings": []
